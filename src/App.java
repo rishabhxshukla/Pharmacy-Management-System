@@ -6,6 +6,8 @@ import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
 import java.net.*;
+import java.time.*;
+import java.time.format.DateTimeParseException;
 
 class App
 {
@@ -13,11 +15,12 @@ class App
     JTextField nameField;
     JTextField quantityField;
     JTextField costField;
+    JTextField expiryDateField;
 
     App()
     {
         frame = new JFrame("Pharmacy Management System");
-        frame.setSize(700, 600);
+        frame.setSize(710, 620);
         frame.setLayout(null);
         frame.setResizable(false);
         frame.setLocationRelativeTo(null);
@@ -61,10 +64,14 @@ class App
         createLabel("Cost :", 140, 132, 60, 30);
         costField = createTextField(330, 130, 200, 40, true);
 
+        //Expiry Date
+        createLabel("Expiry Date :", 140, 182, 220, 30);
+        expiryDateField = createTextField(330, 180, 200, 40, false);
+
         //Buttons
-        createButton("Add Medicine", 180, 190, 145, 40, (new Color(60, 179, 113)), (e -> addMedicine()) );
-        createButton("Delete Medicine", 340, 190, 165, 40, Color.RED, (e -> deleteMedicine()) );
-        createButton("View Inventory", 260, 490, 170, 40, Color.BLUE, (e -> viewInventory()) );
+        createButton("Add Medicine", 180, 240, 145, 40, (new Color(60, 179, 113)), (e -> addMedicine()) );
+        createButton("Delete Medicine", 340, 240, 165, 40, Color.RED, (e -> deleteMedicine()) );
+        createButton("View Inventory", 260, 530, 170, 40, Color.BLUE, (e -> viewInventory()) );
 
         //Medicine List
         displayMedicines();
@@ -157,27 +164,29 @@ class App
         String name = nameField.getText();
         String quantityText = quantityField.getText();
         String costText = costField.getText();
+        String expiryDateText = expiryDateField.getText();
 
         //If any field is empty, display error message
-        if (name.isEmpty() || quantityText.isEmpty() || costText.isEmpty())
+        if (name.isEmpty() || quantityText.isEmpty() || costText.isEmpty() || expiryDateText.isEmpty())
         {
             JOptionPane.showMessageDialog(
                     frame,
-                    "Please enter medicine name, quantity, and cost.",
+                    "Please enter medicine name, quantity, cost, and expiry date.",
                     "Error",
                     JOptionPane.ERROR_MESSAGE
             );
             return;
         }
 
-        //If all fields are inputted, add the medicine to database
-        int quantity = Integer.parseInt(quantityText);
-        double cost = Double.parseDouble(costText);
-
         try (Connection connection = PharmacyManagementSystem.getConnection())
         {
+            //If all fields are inputted, add the medicine to database
+            int quantity = Integer.parseInt(quantityText);
+            double cost = Double.parseDouble(costText);
+            LocalDate expiryDate = LocalDate.parse(expiryDateText);
+
             PharmacyManagementSystem.createTable(connection);
-            PharmacyManagementSystem.insertData(connection, name, quantity, cost);
+            PharmacyManagementSystem.insertData(connection, name, quantity, cost, expiryDate);
             JOptionPane.showMessageDialog(
                     frame,
                     "Medicine added successfully!"
@@ -187,6 +196,16 @@ class App
             nameField.setText("");
             quantityField.setText("");
             costField.setText("");
+            expiryDateField.setText("");
+        }
+        catch (DateTimeParseException ex)
+        {
+            JOptionPane.showMessageDialog(
+                    frame,
+                    "Error: Invalid expiry date format. Please enter the date in YYYY-MM-DD format.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
         catch (SQLException ex)
         {
@@ -208,7 +227,7 @@ class App
         try (Connection connection = PharmacyManagementSystem.getConnection())
         {
             //Query
-            String deleteSQL = "DELETE FROM medicines WHERE name=?";
+            String deleteSQL = "DELETE FROM Medicines WHERE name=?";
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(deleteSQL))
             {
@@ -249,14 +268,14 @@ class App
         try (Connection connection = PharmacyManagementSystem.getConnection())
         {
             //Query
-            String selectSQL = "SELECT name, quantity, cost FROM medicines";
+            String selectSQL = "SELECT name, quantity, cost, expiryDate FROM Medicines";
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(selectSQL))
             {
                 ResultSet resultSet = preparedStatement.executeQuery();
 
                 //Create table model with column names
-                String[] columnNames = {"Medicine", "Quantity", "Price"};
+                String[] columnNames = {"Medicine", "Quantity", "Price", "Expiry"};
                 DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
 
                 //Populate table model with data
@@ -267,7 +286,8 @@ class App
                     int quantity = resultSet.getInt("quantity");
                     double cost = resultSet.getDouble("cost");
                     String formattedCost = String.format("$%.2f", cost);
-                    Object[] rowData = {name, quantity, formattedCost};
+                    LocalDate expiryDate = resultSet.getDate("expiryDate").toLocalDate();
+                    Object[] rowData = {name, quantity, formattedCost, expiryDate};
                     tableModel.addRow(rowData);
                     rowCount++;
                 }
@@ -303,7 +323,7 @@ class App
 
                 //Add table to scroll pane and add scroll pane to frame
                 JScrollPane scrollPane = new JScrollPane(table);
-                scrollPane.setBounds(50, 260, 600, 208);
+                scrollPane.setBounds(50, 305, 600, 208);
                 frame.add(scrollPane);
             }
         }
@@ -325,7 +345,7 @@ class App
         try (Connection connection = PharmacyManagementSystem.getConnection())
         {
             //Query
-            String selectSQL = "SELECT name, quantity, cost FROM medicines";
+            String selectSQL = "SELECT name, quantity, cost, expiryDate FROM Medicines";
 
             try (PreparedStatement preparedStatement = connection.prepareStatement(selectSQL))
             {
@@ -345,7 +365,7 @@ class App
                 }
 
                 //Create table model with column names
-                String[] columnNames = {"Medicine", "Quantity", "Price"};
+                String[] columnNames = {"Medicine", "Quantity", "Price", "Expiry"};
                 DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0);
 
                 //Populate table model with data
@@ -355,7 +375,8 @@ class App
                     int quantity = resultSet.getInt("quantity");
                     double cost = resultSet.getDouble("cost");
                     String formattedCost = String.format("$%.2f", cost);
-                    Object[] rowData = {name, quantity, formattedCost};
+                    LocalDate expiryDate = resultSet.getDate("expiryDate").toLocalDate();
+                    Object[] rowData = {name, quantity, formattedCost, expiryDate};
                     tableModel.addRow(rowData);
                 }
 
@@ -393,7 +414,7 @@ class App
                 inventoryFrame.add(scrollPane);
 
                 //Size of window
-                inventoryFrame.setSize(700, 500);
+                inventoryFrame.setSize(800, 670);
                 inventoryFrame.setLocationRelativeTo(null);
                 inventoryFrame.setVisible(true);
             }

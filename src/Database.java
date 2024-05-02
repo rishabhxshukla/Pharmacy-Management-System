@@ -1,4 +1,5 @@
 import java.sql.*;
+import java.time.*;
 
 class PharmacyManagementSystem
 {
@@ -22,7 +23,8 @@ class PharmacyManagementSystem
                 "id INT AUTO_INCREMENT PRIMARY KEY," +
                 "name VARCHAR(255) NOT NULL," +
                 "quantity INT NOT NULL," +
-                "cost DOUBLE NOT NULL" +
+                "cost DOUBLE NOT NULL," +
+                "expiryDate DATE" +
                 ")";
 
         try (Statement statement = connection.createStatement())
@@ -33,16 +35,17 @@ class PharmacyManagementSystem
 
 
     /* Method to insert data into the table */
-    static void insertData(Connection connection, String name, int quantity, double cost) throws SQLException
+    static void insertData(Connection connection, String name, int quantity, double cost, LocalDate expiryDate) throws SQLException
     {
         //Query
-        String insertSQL = "INSERT INTO medicines (name, quantity, cost) VALUES (?, ?, ?)";
+        String insertSQL = "INSERT INTO Medicines (name, quantity, cost, expiryDate) VALUES (?, ?, ?, ?)";
 
         try (PreparedStatement preparedStatement = connection.prepareStatement(insertSQL))
         {
             preparedStatement.setString(1, name);
             preparedStatement.setInt(2, quantity);
             preparedStatement.setDouble(3, cost);
+            preparedStatement.setDate(4, Date.valueOf(expiryDate));
             preparedStatement.executeUpdate();
         }
     }
