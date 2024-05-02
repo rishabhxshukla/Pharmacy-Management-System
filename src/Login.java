@@ -86,8 +86,7 @@ class Login
 
             if (loginUser(email, password))
             {
-                JOptionPane.showMessageDialog(frame, "Login successful!");
-                // Trigger login callback
+                //Trigger login callback
                 if (loginCallback != null) {
                     loginCallback.run();
                 }
